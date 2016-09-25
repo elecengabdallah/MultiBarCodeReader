@@ -5,7 +5,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 
 import org.apache.commons.net.telnet.EchoOptionHandler;
-import org.apache.commons.net.telnet.InvalidTelnetOptionException;
 import org.apache.commons.net.telnet.SuppressGAOptionHandler;
 import org.apache.commons.net.telnet.TelnetClient;
 import org.apache.commons.net.telnet.TelnetNotificationHandler;
@@ -17,48 +16,68 @@ public class BCReader implements TelnetNotificationHandler {
 	private InputStream in;
 	private OutputStream out;
 	
-	private String serverAddress = null;
-	private int serverPort = 23;
-	private String userName = "admin\r\n";
-	private String password = "\r\n";
+	private String serverAddress = null;	
+	private int serverPort;
+	private String userName;
+	private String password;
 	
 	private String MAC = null;
 	
 	private final static String GET_MAC_COMMAND = "||>get device.mac-address\r\n";
 	
+	private static String defaultUserName = "admin";
+	private static String defaultPassword = "";
+	private static int defaultServerPort = 23;
+	
 	/***
-	 * Default constructor, sets the serverAddress and use default Telnet port 23;
+	 * Default constructor, sets the serverAddress and use default Telnet port 23, username
+	 * and password.
 	 * @param serverAddress
 	 */
 	public BCReader(String serverAddress) {
-		this.serverAddress = serverAddress;
+		
+		this(serverAddress, defaultUserName, defaultPassword, defaultServerPort);
 	}
 	
 	/***
-	 * Construct an instance with the specified serverAddress and serverPort
+	 * Construct an instance with the specified serverAddress and serverPort and use the
+	 * default username and password.
 	 * @param serverAddress
 	 * @param serverPort
 	 */
 	public BCReader(String serverAddress, int serverPort) {
+		
+		this(serverAddress, defaultUserName, defaultPassword, serverPort);
+	}
+	
+	/***
+	 * Construct an instance with the specified serverAddress, username and password. And use 
+	 * the default server port.
+	 * @param serverAddress
+	 * @param userName
+	 * @param password
+	 */
+	public BCReader(String serverAddress, String userName, String password) {
+		
+		this(serverAddress, userName, password, defaultServerPort);
+	}
+	
+	/***
+	 * Construct an instance with the specified serverAddress, username, password and 
+	 * server port.
+	 * @param serverAddress
+	 * @param userName
+	 * @param password
+	 * @param serverPort
+	 */
+	public BCReader(String serverAddress, String userName, String password, int serverPort) {
 		this.serverAddress = serverAddress;
+		this.userName = userName + "\r\n";
+		this.password = password + "\r\n";
 		this.serverPort = serverPort;
 	}
 	
-	public String getUserName() {
-		return userName;
-	}
-
-	public void setUserName(String userName) {
-		this.userName = userName;
-	}
 	
-	public String getPassword() {
-		return password;
-	}
-	
-	public void setPassword(String password) {
-		this.password = password;
-	}
 
 	/***
 	 * send messages to Barcode Reader
@@ -80,6 +99,13 @@ public class BCReader implements TelnetNotificationHandler {
 		}
 	}
 	
+	//start method
+	
+	/***
+	 * Creates telnet clinet socket, gets input and output streams and sends username, password
+	 * and get MAC address command.
+	 * @return true if no error is happened while establishing connection.
+	 */
 	public boolean start() {
 		
 		//create telnetSocket instance
@@ -120,12 +146,27 @@ public class BCReader implements TelnetNotificationHandler {
 		sendMsg(userName);
 		sendMsg(password);
 		
+		//send get MAC address command
+		sendMsg(GET_MAC_COMMAND);
 		
 		return true;
 	}
 	
+	/***
+	 * disconnects the socket and its input and output streams
+	 */
+	public void disconnect() {
+		
+		try {
+			telnetSocket.disconnect();
+		} catch (IOException e) {
+			// nothing to do
+		}
+	}
 	
-	
+	/***
+	 * Received negotiation method
+	 */
 	@Override
 	public void receivedNegotiation(int negotioation_code, int option_code) {
 		String command = null;
